@@ -1,0 +1,38 @@
+options{    LOOKAHEAD=1;   //LL(1)    CHOICE_AMBIGUITY_CHECK = 2;  	OTHER_AMBIGUITY_CHECK = 1;  	STATIC = false;  	DEBUG_PARSER = false;  	DEBUG_LOOKAHEAD = false;  	DEBUG_TOKEN_MANAGER = false;  	ERROR_REPORTING = true;  	JAVA_UNICODE_ESCAPE = false;  	UNICODE_INPUT = false;  	IGNORE_CASE = false;  	USER_TOKEN_MANAGER = false;  	USER_CHAR_STREAM = false;  	BUILD_PARSER = true;  	BUILD_TOKEN_MANAGER = true;  	SANITY_CHECK = true;  	FORCE_LA_CHECK = false;}
+PARSER_BEGIN(SemanticChecker) public class SemanticChecker {    public static void main(String[] args) {        try {            new SemanticChecker(new java.io.StringReader(args[0])).Program();                        System.out.println("Semantic is okay");        } catch (Throwable e) {            // Catching Throwable is ugly but JavaCC throws Error objects!            System.out.println("Semantic check failed: " + e.getMessage());        }    }}PARSER_END(SemanticChecker)
+
+SKIP: { " " }
+SKIP: { "\t" }
+SKIP: { "\n" }
+SKIP: { "\r" }
+SKIP :
+{
+  < "//" (~["\r", "\n"])* >
+| < "/*" > : ML_COMMENT_STATE
+}
+
+<ML_COMMENT_STATE> SKIP :
+{
+  < "*/" > : DEFAULT
+| < ~[] >   
+}TOKEN: {< CHAR: "\'"([" "-"~"])*"\'" >}TOKEN: { <digit: (["0"-"9"])+> }TOKEN: { <letter: ["a"-"z"] (["a"-"z"])*> }TOKEN: { <ID: ["a"-"z"] (["a"-"z"] | ["0"-"9"])*> }TOKEN: { <START: "start"> }TOKEN: { <BREAK: "break"> }TOKEN: { <STRUCT: "struct"> }TOKEN: { <INTERFACE: "interface"> }TOKEN: { <ENUM: "enum"> }TOKEN: { <ELSE: "else"> }TOKEN: { <CONST: "const"> }TOKEN: { <IF: "if"> }TOKEN: { <NEW: "new"> }TOKEN: { <PRINTF: "printf"> }TOKEN: { <READ: "read"> }TOKEN: { <RETURN: "return"> }TOKEN: { <VOID: "void"> }TOKEN: { <FOR: "for"> }TOKEN: { <EXTENDS: "extends"> }TOKEN: { <CONTINUE: "continue"> }TOKEN: { <ident: < letter >(< letter > |< digit > | "_")*> }TOKEN: { < numConst:< digit > (< digit >)* > }TOKEN: {< charConst: "\'"([" "-"~"])*"\'" >}TOKEN: {< booleanConst: ("True" | "False") >}
+TOKEN: { <ASSA: "="> }
+TOKEN: { <PLUS: "+"> }
+TOKEN: { <MINUS: "-"> }
+TOKEN: { <TIMES: "*"> }
+TOKEN: { <DIV: "/"> }
+TOKEN: { <REM: "%"> }
+TOKEN: { <EQU: "=="> }
+TOKEN: { <NOEQU: "!="> }
+TOKEN: { <GREATER: ">"> }
+TOKEN: { <NOLESS: ">="> }
+TOKEN: { <LESS: "<"> }
+TOKEN: { <NOGREATER: "<="> }
+TOKEN: { <AND: "&&"> }
+TOKEN: { <OR: "||"> }
+TOKEN: { <PLUSONE: "++"> }
+TOKEN: { <MINUSONE: "--"> }
+TOKEN: { <SEMICOLON: ";"> }TOKEN: { <dot: "."> }TOKEN: { <LBracket: "("> }TOKEN: { <RBracket: ")"> }TOKEN: { <LSquarebracket: "["> }TOKEN: { <RSquarebracket: "]"> }TOKEN: { <LParantheses: "{"> }TOKEN: { <RParantheses: "}"> }
+
+
+void Program(): {} { < START > < ident > ( ConstDecl() | VarDecl() | StructDecl()| EnumDecl() | InterfaceDecl() )* "{" MethodDecl() "}"< EOF >}void ConstDecl(): { } {< CONST > Type() < ident > "=" (< numConst >| < charConst >| < booleanConst >) ( <ident > "=" (< numConst > | < charConst > | < booleanConst >) )* ";"}void EnumDecl(): { } {< ENUM > < ident > "{" < ident >("=" < numConst >)? ("," < ident > ("=" < numConst >)?)* "}"}void VarDecl(): { } {Type() < ident > ("[" "]")? ("," < ident > ("[" "]")?)* ";"}void StructDecl(): { } { < STRUCT > < ident > ("extends" Type())? ("implements" Type() ("," Type())*)?"{"  (VarDecl())("{"(MethodDecl())* "}")?"}"}void InterfaceDecl(): { } { < INTERFACE > < ident > "{"(InterfaceMethodDecl())* "}"}void InterfaceMethodDecl(): { } { (Type() | < VOID >) < ident > "(" (FormPars())?")" ";"}void MethodDecl(): { } {(Type() | < VOID >) < ident > "(" (FormPars())?")" (VarDecl())* "{" (Stmt())* "}"}void FormPars(): { } { Type() < ident > ["[" "]"] ("," Type() < ident > ["[" "]"])*}void Type(): { } { < ident >}void Stmt(): { } {DesignatorStmt() < SEMICOLON >  | "if" "(" Condition() ")" Stmt() ("else" Stmt())?  | "for" "(" (DesignatorStmt() )? ";" (Condition())? ";" (DesignatorStmt())? ")" Stmt()  | "break" ";"  | "continue" ";"  | "return" (Expression())? ";"  | "read" "(" Designator() ")" ";"  | "printf" "(" Expression() ("," < numConst >)? ")" ";"  | "{" (Stmt())* "}" }void DesignatorStmt(): { } { Designator() (Assignop() Expression() | "(" (ActPars())? ")" | "++" | "--")}void ActPars(): { } { Expression() ("," Expression())*}void Condition(): { } { CondTerm() ("||" CondTerm())*}void CondTerm(): { } { CondFact() ("&&" CondFact())*}void CondFact(): { } { Expression() (Relop() Expression())?}void Expression(): { } { ("-")? Term() (Addop() Term())*}void Term(): { } { Factor() (Mulop() Factor())*}void Factor(): { } { Designator() ("(" (ActPars())? ")")?  | < numConst >  | < charConst >  | < booleanConst >  | "new" Type() ("[" Expression() "]")?  | "(" Expression() ")"}void Designator(): { } { < ident > ("." < ident > | "[" Expression() "]")*}void Assignop(): { } { < ASSA >}void Relop(): { } {< EQU > | < NOEQU > | < GREATER > | < NOLESS > | < LESS > | < NOGREATER > }void Addop(): { } {< PLUS > | < MINUS >}void Mulop(): { } {< TIMES > | < DIV > | < REM >}
