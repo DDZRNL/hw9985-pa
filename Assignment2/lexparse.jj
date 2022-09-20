@@ -1,5 +1,263 @@
-options{    LOOKAHEAD=1;   //LL(1)    CHOICE_AMBIGUITY_CHECK = 2;  	OTHER_AMBIGUITY_CHECK = 1;  	STATIC = false;  	DEBUG_PARSER = false;  	DEBUG_LOOKAHEAD = false;  	DEBUG_TOKEN_MANAGER = false;  	ERROR_REPORTING = true;  	JAVA_UNICODE_ESCAPE = false;  	UNICODE_INPUT = false;  	IGNORE_CASE = false;  	USER_TOKEN_MANAGER = false;  	USER_CHAR_STREAM = false;  	BUILD_PARSER = true;  	BUILD_TOKEN_MANAGER = true;  	SANITY_CHECK = true;  	FORCE_LA_CHECK = false;}
-PARSER_BEGIN(SemanticChecker) public class SemanticChecker {    public static void main(String[] args) {        try {            new SemanticChecker(new java.io.StringReader(args[0])).Program();                        System.out.println("Semantic is okay");        } catch (Throwable e) {            // Catching Throwable is ugly but JavaCC throws Error objects!            System.out.println("Semantic check failed: " + e.getMessage());        }    }}PARSER_END(SemanticChecker)
+options{
+    LOOKAHEAD=1;   //LL(1)
+
+    CHOICE_AMBIGUITY_CHECK = 2;
+  	OTHER_AMBIGUITY_CHECK = 1;
+  	STATIC = false;
+  	DEBUG_PARSER = false;
+  	DEBUG_LOOKAHEAD = false;
+  	DEBUG_TOKEN_MANAGER = false;
+  	ERROR_REPORTING = true;
+  	JAVA_UNICODE_ESCAPE = false;
+  	UNICODE_INPUT = false;
+  	IGNORE_CASE = false;
+  	USER_TOKEN_MANAGER = false;
+  	USER_CHAR_STREAM = false;
+  	BUILD_PARSER = true;
+  	BUILD_TOKEN_MANAGER = true;
+  	SANITY_CHECK = true;
+  	FORCE_LA_CHECK = false;
+}
+
+PARSER_BEGIN(SemanticChecker)
+ 
+public class SemanticChecker {
+
+    public static void main(String[] args) {
+        try {
+            new SemanticChecker(new java.io.StringReader(args[0])).Program();
+            Visitor visitor = new EvalVisitor();
+            ast.accept(visitor);
+            System.out.println("Semantic is okay");
+        } catch (Throwable e) {
+            // Catching Throwable is ugly but JavaCC throws Error objects!
+            System.out.println("Semantic check failed: " + e.getMessage());
+        }
+    }
+}
+
+
+abstract class Visitor {
+
+    public abstract void visit(Program node);
+    public abstract void visitEnd(Program node);
+
+    public abstract void visit(ConstDecl node);
+    public abstract void visitEnd(ConstDecl node);
+
+    public abstract void visit(EnumDecl node);
+    public abstract void visitEnd(EnumDecl node);
+
+    public abstract void visit(VarDecl node);
+    public abstract void visitEnd(VarDecl node);
+
+    public abstract void visit(StructDecl node);
+    public abstract void visitEnd(StructDecl node);
+
+    public abstract void visit(InterfaceDecl node);
+    public abstract void visitEnd(InterfaceDecl node);
+
+    public abstract void visit(InterfaceMethodDecl node);
+    public abstract void visitEnd(InterfaceMethodDecl node);
+
+    public abstract void visit(MethodDecl node);
+    public abstract void visitEnd(MethodDecl node);
+
+    public abstract void visit(FormPars node);
+    public abstract void visitEnd(FormPars node);
+
+    public abstract void visit(Type  node);
+    public abstract void visitEnd(Type  node);
+
+    public abstract void visit(Stmt node);
+    public abstract void visitEnd(Stmt node);
+
+    public abstract void visit(DesignatorStmt node);
+    public abstract void visitEnd(DesignatorStmt node);
+
+    public abstract void visit(ActPars node);
+    public abstract void visitEnd(ActPars node);
+
+    public abstract void visit(Condition node);
+    public abstract void visitEnd(Condition node);
+
+    public abstract void visit(CondTerm node);
+    public abstract void visitEnd(CondTerm node);
+
+    public abstract void visit(CondFact node);
+    public abstract void visitEnd(CondFact node);
+
+    public abstract void visit(Expression node);
+    public abstract void visitEnd(Expression node);
+
+    public abstract void visit(Term node);
+    public abstract void visitEnd(Term node);
+
+    public abstract void visit(Factor node);
+    public abstract void visitEnd(Factor node);
+
+    public abstract void visit(Designator node);
+    public abstract void visitEnd(Designator node);
+
+}
+
+class EvalVisitor extends Visitor {
+
+    private Map<String, Integer> memory = new HashMap<String, Integer>();
+
+    private Map<Exp, Integer> expResults = new HashMap<Exp, Integer>();
+
+    public void visit(Prog node) {
+	// NOP
+    }
+
+    public void visitEnd(Prog node) {
+	System.out.println(expResults.get(node.exp));
+    }
+
+    public void visit(Decl node) {
+	// NOP
+    }
+
+    public void visitEnd(Decl node) {
+	memory.put(node.id.name, expResults.get(node.exp));
+    }
+
+    public void visit(Exp node) {
+	// NOP
+    }
+
+    public void visitEnd(Exp node) {
+	int left = expResults.get(node.idNum);
+	int right = expResults.get(node.exp);
+	int result = 0;
+	switch (node.op) {
+	case "+":
+	    result = left + right;
+	    break;
+	case "-":
+	    result = left - right;
+	    break;
+	case "*":
+	    result = left * right;
+	    break;
+	case "/":
+	    result = left / right;
+	    break;
+	default:
+	    throw new RuntimeException();
+	}
+	expResults.put(node, result);
+    }
+
+    public void visit(Id node) {
+	// NOP
+    }
+
+    public void visitEnd(Id node) {
+	expResults.put(node, memory.get(node.name));
+    }
+
+    public void visit(Num node) {
+	// NOP
+    }
+
+    public void visitEnd(Num node) {
+	expResults.put(node, node.val);
+    }
+}
+
+abstract class Node {
+    public abstract void accept(Visitor v);
+}
+
+class Prog extends Node {
+    List<Decl> declarations;
+    Exp exp;
+
+    public Prog(List<Decl> declarations, Exp exp) {
+        this.declarations = declarations;
+        this.exp = exp;
+    }
+
+    public void accept(Visitor v) {
+        v.visit(this);
+        for (Decl d : declarations) {
+            d.accept(v);
+        }
+        exp.accept(v);
+	v.visitEnd(this);
+    }
+}
+
+class Decl extends Node {
+    Id id;
+    Exp exp;
+
+    public Decl(Id id, Exp exp) {
+        this.id = id;
+        this.exp = exp;
+    }
+
+    public void accept(Visitor v) {
+        v.visit(this);
+	id.accept(v);
+        exp.accept(v);
+	v.visitEnd(this);
+    }
+}
+
+class Exp extends Node {
+    Exp idNum;
+    String op;
+    Exp exp;
+
+    public Exp() {}
+
+    public Exp(Exp idNum, String op, Exp exp) {
+        this.idNum = idNum;
+        this.op = op;
+        this.exp = exp;
+    }
+
+    public void accept(Visitor v) {
+        v.visit(this);
+        idNum.accept(v);
+        exp.accept(v);
+	v.visitEnd(this);
+    }
+}
+
+// NOT NICE: this is not an Exp, because Exp is basically a binary expression.
+class Id extends Exp {
+    String name;
+
+    public Id(String name) {
+        this.name = name;
+    }
+
+    public void accept(Visitor v) {
+        v.visit(this);
+	v.visitEnd(this);
+    }
+}
+
+// NOT NICE: this is not an Exp, because Exp is basically a binary expression.
+class Num extends Exp {
+    Integer val;
+
+    public Num(Integer val) {
+        this.val = val;
+    }
+
+    public void accept(Visitor v) {
+        v.visit(this);
+	v.visitEnd(this);
+    }
+}
+
+PARSER_END(SemanticChecker)
+
 
 SKIP: { " " }
 SKIP: { "\t" }
@@ -15,7 +273,35 @@ SKIP :
 {
   < "*/" > : DEFAULT
 | < ~[] >   
-}TOKEN: {< CHAR: "\'"([" "-"~"])*"\'" >}TOKEN: { <digit: (["0"-"9"])+> }TOKEN: { <letter: ["a"-"z"] (["a"-"z"])*> }TOKEN: { <ID: ["a"-"z"] (["a"-"z"] | ["0"-"9"])*> }TOKEN: { <START: "start"> }TOKEN: { <BREAK: "break"> }TOKEN: { <STRUCT: "struct"> }TOKEN: { <INTERFACE: "interface"> }TOKEN: { <ENUM: "enum"> }TOKEN: { <ELSE: "else"> }TOKEN: { <CONST: "const"> }TOKEN: { <IF: "if"> }TOKEN: { <NEW: "new"> }TOKEN: { <PRINTF: "printf"> }TOKEN: { <READ: "read"> }TOKEN: { <RETURN: "return"> }TOKEN: { <VOID: "void"> }TOKEN: { <FOR: "for"> }TOKEN: { <EXTENDS: "extends"> }TOKEN: { <CONTINUE: "continue"> }TOKEN: { <ident: < letter >(< letter > |< digit > | "_")*> }TOKEN: { < numConst:< digit > (< digit >)* > }TOKEN: {< charConst: "\'"([" "-"~"])*"\'" >}TOKEN: {< booleanConst: ("True" | "False") >}
+}
+
+TOKEN: {< CHAR: "\'"([" "-"~"])*"\'" >}
+TOKEN: { <digit: (["0"-"9"])+> }
+TOKEN: { <letter: ["a"-"z"] (["a"-"z"])*> }
+TOKEN: { <ID: ["a"-"z"] (["a"-"z"] | ["0"-"9"])*> }
+
+TOKEN: { <START: "start"> }
+TOKEN: { <BREAK: "break"> }
+TOKEN: { <STRUCT: "struct"> }
+TOKEN: { <INTERFACE: "interface"> }
+TOKEN: { <ENUM: "enum"> }
+TOKEN: { <ELSE: "else"> }
+TOKEN: { <CONST: "const"> }
+TOKEN: { <IF: "if"> }
+TOKEN: { <NEW: "new"> }
+TOKEN: { <PRINTF: "printf"> }
+TOKEN: { <READ: "read"> }
+TOKEN: { <RETURN: "return"> }
+TOKEN: { <VOID: "void"> }
+TOKEN: { <FOR: "for"> }
+TOKEN: { <EXTENDS: "extends"> }
+TOKEN: { <CONTINUE: "continue"> }
+
+TOKEN: { <ident: < letter >(< letter > |< digit > | "_")*> }
+TOKEN: { < numConst:< digit > (< digit >)* > }
+TOKEN: {< charConst: "\'"([" "-"~"])*"\'" >}
+TOKEN: {< booleanConst: ("True" | "False") >}
+
 TOKEN: { <ASSA: "="> }
 TOKEN: { <PLUS: "+"> }
 TOKEN: { <MINUS: "-"> }
@@ -32,7 +318,214 @@ TOKEN: { <AND: "&&"> }
 TOKEN: { <OR: "||"> }
 TOKEN: { <PLUSONE: "++"> }
 TOKEN: { <MINUSONE: "--"> }
-TOKEN: { <SEMICOLON: ";"> }TOKEN: { <dot: "."> }TOKEN: { <LBracket: "("> }TOKEN: { <RBracket: ")"> }TOKEN: { <LSquarebracket: "["> }TOKEN: { <RSquarebracket: "]"> }TOKEN: { <LParantheses: "{"> }TOKEN: { <RParantheses: "}"> }
+TOKEN: { <SEMICOLON: ";"> }
+
+TOKEN: { <dot: "."> }
+TOKEN: { <LBracket: "("> }
+TOKEN: { <RBracket: ")"> }
+TOKEN: { <LSquarebracket: "["> }
+TOKEN: { <RSquarebracket: "]"> }
+TOKEN: { <LParantheses: "{"> }
+TOKEN: { <RParantheses: "}"> }
 
 
-void Program(): {} { < START > < ident > ( ConstDecl() | VarDecl() | StructDecl()| EnumDecl() | InterfaceDecl() )* "{" MethodDecl() "}"< EOF >}void ConstDecl(): { } {< CONST > Type() < ident > "=" (< numConst >| < charConst >| < booleanConst >) ( <ident > "=" (< numConst > | < charConst > | < booleanConst >) )* ";"}void EnumDecl(): { } {< ENUM > < ident > "{" < ident >("=" < numConst >)? ("," < ident > ("=" < numConst >)?)* "}"}void VarDecl(): { } {Type() < ident > ("[" "]")? ("," < ident > ("[" "]")?)* ";"}void StructDecl(): { } { < STRUCT > < ident > ("extends" Type())? ("implements" Type() ("," Type())*)?"{"  (VarDecl())("{"(MethodDecl())* "}")?"}"}void InterfaceDecl(): { } { < INTERFACE > < ident > "{"(InterfaceMethodDecl())* "}"}void InterfaceMethodDecl(): { } { (Type() | < VOID >) < ident > "(" (FormPars())?")" ";"}void MethodDecl(): { } {(Type() | < VOID >) < ident > "(" (FormPars())?")" (VarDecl())* "{" (Stmt())* "}"}void FormPars(): { } { Type() < ident > ["[" "]"] ("," Type() < ident > ["[" "]"])*}void Type(): { } { < ident >}void Stmt(): { } {DesignatorStmt() < SEMICOLON >  | "if" "(" Condition() ")" Stmt() ("else" Stmt())?  | "for" "(" (DesignatorStmt() )? ";" (Condition())? ";" (DesignatorStmt())? ")" Stmt()  | "break" ";"  | "continue" ";"  | "return" (Expression())? ";"  | "read" "(" Designator() ")" ";"  | "printf" "(" Expression() ("," < numConst >)? ")" ";"  | "{" (Stmt())* "}" }void DesignatorStmt(): { } { Designator() (Assignop() Expression() | "(" (ActPars())? ")" | "++" | "--")}void ActPars(): { } { Expression() ("," Expression())*}void Condition(): { } { CondTerm() ("||" CondTerm())*}void CondTerm(): { } { CondFact() ("&&" CondFact())*}void CondFact(): { } { Expression() (Relop() Expression())?}void Expression(): { } { ("-")? Term() (Addop() Term())*}void Term(): { } { Factor() (Mulop() Factor())*}void Factor(): { } { Designator() ("(" (ActPars())? ")")?  | < numConst >  | < charConst >  | < booleanConst >  | "new" Type() ("[" Expression() "]")?  | "(" Expression() ")"}void Designator(): { } { < ident > ("." < ident > | "[" Expression() "]")*}void Assignop(): { } { < ASSA >}void Relop(): { } {< EQU > | < NOEQU > | < GREATER > | < NOLESS > | < LESS > | < NOGREATER > }void Addop(): { } {< PLUS > | < MINUS >}void Mulop(): { } {< TIMES > | < DIV > | < REM >}
+
+void Program():
+{}
+{
+  < START >
+  < ident >
+  ( ConstDecl()
+  | VarDecl()
+  | StructDecl()
+  | EnumDecl()
+  | InterfaceDecl()
+  )*
+  "{"
+  MethodDecl()
+  "}"	
+  < EOF >
+}
+
+void ConstDecl():
+{ }
+{
+  < CONST >
+  Type()
+  < ident >
+  "="
+  (< numConst >| < charConst >| < booleanConst >)
+  ( <ident > "=" (< numConst > | < charConst > | < booleanConst >) )*
+  ";"
+}
+
+void EnumDecl():
+{ }
+{
+  < ENUM >
+  < ident >
+  "{"
+  < ident >
+  ("=" < numConst >)?
+  ("," < ident > ("=" < numConst >)?)*
+  "}"
+}
+
+void VarDecl():
+{ }
+{
+  Type()
+  < ident >
+  ("[" "]")?
+  ("," < ident > ("[" "]")?)*
+  ";"
+}
+
+void StructDecl():
+{ }
+{
+  < STRUCT >
+  < ident >
+  ("extends" Type())?
+  ("implements" Type() ("," Type())*)?
+  "{"
+  (VarDecl())
+  ("{"(MethodDecl())* "}")?
+  "}"
+}
+
+void InterfaceDecl():
+{ }
+{
+  < INTERFACE >
+  < ident >
+  "{"
+  (InterfaceMethodDecl())*
+  "}"
+}
+
+void InterfaceMethodDecl():
+{ }
+{
+  (Type() | < VOID >)
+  < ident >
+  "("
+  (FormPars())?
+  ")"
+  ";"
+}
+
+void MethodDecl():
+{ }
+{
+  (Type() | < VOID >) < ident > "(" (FormPars())?")" (VarDecl())*
+  "{"
+  (Stmt())*
+  "}"
+  }
+  
+void FormPars():
+{ }
+{
+  Type()
+  < ident >
+  ["[" "]"]
+  ("," Type() < ident > ["[" "]"])*
+}
+
+void Type():
+{ }
+{
+  < ident >
+}
+
+void Stmt():
+{ }
+{
+  DesignatorStmt()
+  < SEMICOLON >
+  | "if" "(" Condition() ")" Stmt() ("else" Stmt())?
+  | "for" "(" (DesignatorStmt() )? ";" (Condition())? ";" (DesignatorStmt())? ")" Stmt()
+  | "break" ";"
+  | "continue" ";"
+  | "return" (Expression())? ";"
+  | "read" "(" Designator() ")" ";"
+  | "printf" "(" Expression() ("," < numConst >)? ")" ";"
+  | "{" (Stmt())* "}"
+}
+
+void DesignatorStmt():
+{ }
+{
+  Designator()
+  (Assignop() Expression() | "(" (ActPars())? ")" | "++" | "--")
+}
+
+void ActPars():
+{ }
+{
+  Expression()
+  ("," Expression())*
+}
+
+void Condition():
+{ }
+{
+  CondTerm()
+  ("||" CondTerm())*
+}
+
+void CondTerm():
+{ }
+{
+  CondFact() 
+  ("&&" CondFact())*
+}
+
+void CondFact():
+{ }
+{
+  Expression()
+  (Relop() Expression())?
+}
+
+void Expression():
+{ }
+{
+  ("-")?
+  Term()
+  (Addop() Term())*
+}
+
+void Term():
+{ }
+{
+  Factor()
+  (Mulop() Factor())*
+}
+
+void Factor():
+{ }
+{
+  Designator()
+  ("(" (ActPars())? ")")?
+  | < numConst >
+  | < charConst >
+  | < booleanConst >
+  | "new" Type() ("[" Expression() "]")?
+  | "(" Expression() ")"
+} 
+
+void Designator():
+{ }
+{
+  < ident >
+  ("." < ident > | "[" Expression() "]")*
+}
+
+String Assignop(): { } { < ASSA > { return "="; }}
+String Relop(): { } {< EQU > { return "=="; }| < NOEQU > { return "!="; }| < GREATER > { return " >"; }| < NOLESS > { return " >="; }| < LESS > { return "< "; }| < NOGREATER > { return "<="; }}
+String Addop(): { } {< PLUS > { return "+"; }| < MINUS > { return "-";} }
+String Mulop():{ } { < TIMES > { return "*"; } | < DIV > { return "/";} | < REM > { return "%"; }}
+
+
