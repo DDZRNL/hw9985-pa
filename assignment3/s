@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# Requires Java 8 and Gradle.
+
+if [ ! -d jpf-core ]; then
+        git clone https://github.com/javapathfinder/jpf-core
+fi
+( cd jpf-core
+  sed -i 's/public void setJavaObjectInputStreamReadString.*/public void setJavaObjectInputStreamReadString() {/g' src/classes/sun/misc/SharedSecrets.java
+  gradle buildJars -x test
+)
+
+# Run example
+javac Demo.java
+jpf-core/bin/jpf +classpath=. Demo
+
+# Compile listeners and use them
+javac -classpath jpf-core/build/jpf.jar CoverageListener.java  #AddToSubListener.java #SetFieldListener.java #CoverageListener.java
+if [ $? -ne 0 ]; then
+       echo "ERROR: compilation of listeners failed"
+       exit 1
+fi
+
+#jpf-core/bin/jpf +native_classpath=. +classpath=. +listener=AddToSubListener Demo
+#jpf-core/bin/jpf +native_classpath=. +classpath=. +listener=SetFieldListener Demo
+jpf-core/bin/jpf +native_classpath=. +classpath=. +listener=CoverageListener Demo
+#$1
