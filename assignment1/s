@@ -1,0 +1,4 @@
+#!/bin/bash
+
+javac XMini/*.java
+java XMini.Main $1
