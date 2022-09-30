@@ -16,7 +16,7 @@ public class Interpreter {
 	public static void Interpreter(String text){
 		
 		//BufferedReader br = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(text.getBytes(Charset.forName("utf8"))), Charset.forName("utf8"))); 
-		System.out.println("**************Interpreter******************");
+		//System.out.println("**************Interpreter******************");
 		
 		Scanner scanner = new Scanner(text);
 		while (scanner.hasNextLine()) {
