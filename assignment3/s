@@ -11,8 +11,8 @@ fi
 )
 
 # Run example
-javac $1
-jpf-core/bin/jpf +classpath=. $1
+#javac $1
+#jpf-core/bin/jpf +classpath=. $1
 
 # Compile listeners and use them
 javac -classpath jpf-core/build/jpf.jar CoverageListener.java  #AddToSubListener.java #SetFieldListener.java #CoverageListener.java
