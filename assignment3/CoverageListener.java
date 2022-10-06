@@ -27,6 +27,8 @@ import java.util.Map;
 import java.util.HashMap;
 import gov.nasa.jpf.vm.LocalVarInfo;
 import gov.nasa.jpf.vm.StackFrame;
+import gov.nasa.jpf.jvm.bytecode.IRETURN;
+import gov.nasa.jpf.jvm.bytecode.FRETURN;
 
 
 public class CoverageListener extends ListenerAdapter {
@@ -39,11 +41,14 @@ public class CoverageListener extends ListenerAdapter {
 	
 	private Map<String, Map> memo_method = new HashMap<>();
 	private Map<String, String> memo = new HashMap<>();
+	private Map<String, String> MethodRet = new HashMap<>();
 	
 	private String key="";
 	private String val="";
 	private String ReturnType="";
 	private String temp="";
+	
+	//private IRETURN ireturn = new IRETURN();
 
     @Override
     public void executeInstruction(VM vm, ThreadInfo currentThread, Instruction instructionToExecute) {
@@ -60,7 +65,7 @@ public class CoverageListener extends ListenerAdapter {
 	
 	public void methodEntered(VM vm, ThreadInfo currentThread, MethodInfo enteredMethod){
 		String l = enteredMethod.getFullName();
-		StackFrame frame=currentThread.getModifiableTopFrame(); //getTopFrame(); //getTopFrame();   //getCallerStackFrame();
+		StackFrame frame=currentThread.getTopFrame(); //getTopFrame(); //getModifiableTopFrame();   //getCallerStackFrame();
 		
         if (l != null && !l.startsWith("java") && !l.startsWith("sun") && !l.startsWith("gov")) {
 			//key="";
@@ -71,6 +76,8 @@ public class CoverageListener extends ListenerAdapter {
 			temp=temp+name;
 			
 			Instruction pc = currentThread.getPC();
+			
+			IRETURN ireturn = new IRETURN();
 			
 			Object[] arguValues=frame.getArgumentValues(currentThread);
 			for(int i=0;i< arguValues.length;i++){
@@ -83,11 +90,35 @@ public class CoverageListener extends ListenerAdapter {
 				System.out.println("Memoization: ");  //  +memo.get(temp)
 				//currentThread.skipInstruction();
 				//StackFrame frame1 = currentThread.getModifiableTopFrame();
-			    frame.pop();
-			    frame.push(42);
+				ireturn.init(enteredMethod, pc.getInstructionIndex(), pc.getPosition());
+				
+				//ireturn.getAndSaveReturnValue(frame);
+				
+				// int ret=ireturn.getReturnValue();
+				// System.out.println("The ret is: "+ret);
+				//frame.pop();
+				//System.out.println("The returntype is : "+ReturnType);
+				
+				int ret1=Integer.valueOf(memo.get(temp)).intValue();
+				double ret2=Double.parseDouble(memo.get(temp)); 
+				
+				// if(ReturnType.contains("double")){
+					// //int ret=Integer.valueOf(memo.get(temp)).intValue();
+					// frame.push(ret2);
+				// }
+				// else{
+					// //float ret=Float.parseFloat(memo.get(temp)); 
+					// frame.push(ret1);
+				// }
+				
+				frame.push(ret1);
+				frame.setPC(ireturn);
+				
+			    // frame.pop();
+			    // frame.push(42);
 
-				currentThread.skipInstruction(pc.getNext());
-				return ;
+				//currentThread.skipInstruction(pc.getNext());
+				//return ;
 				//memoCheck();
 				//System.out.println("Memo: "+memo.get(key));
 			}
@@ -101,6 +132,7 @@ public class CoverageListener extends ListenerAdapter {
 				// System.out.println("Signature: "+signature);
 				
 				ReturnType=enteredMethod.getReturnTypeName();
+				MethodRet.put(key, ReturnType);
 				//System.out.println("The Return Type of the Method: "+ReturnType);
 				
 				// int argnum=enteredMethod.getNumberOfArguments() ;
@@ -171,7 +203,7 @@ public class CoverageListener extends ListenerAdapter {
 		val="";
 		String l = exitedMethod.getFullName();
 		
-		StackFrame frame=currentThread.getModifiableTopFrame(); //getTopFrame();  //getCallerStackFrame();
+		StackFrame frame=currentThread.getTopFrame(); //getTopFrame();  //getCallerStackFrame();  getModifiableTopFrame();
 
 		if (l != null && !l.startsWith("java") && !l.startsWith("sun") && !l.startsWith("gov")) {
 			int res= frame.peek();  //stack.getResult(); 
