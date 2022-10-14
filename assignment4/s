@@ -1,0 +1,12 @@
+#!/bin/bash
+
+javac -cp libs/* DemoAgent.java CFT.java TraceVisitor.java
+jar cfvm demo-agent.jar META-INF/MANIFEST.MF *.class
+
+javac Input.java
+java -javaagent:demo-agent.jar -cp libs/*:. Input
+javac Process.java
+java Process
+
+## User ASMifier to view bytecode in the ASM style.
+# java -cp libs/asm-all-5.2.jar:. org/objectweb/asm/util/ASMifier C
