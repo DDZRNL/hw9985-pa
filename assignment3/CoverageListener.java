@@ -2,6 +2,8 @@ import java.io.File;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.*;
+import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
 
 import gov.nasa.jpf.jvm.ClassFile;
 import gov.nasa.jpf.report.Publisher;
@@ -64,14 +66,15 @@ public class CoverageListener extends ListenerAdapter {
     }
 	
 	public void methodEntered(VM vm, ThreadInfo currentThread, MethodInfo enteredMethod){
+
 		String l = enteredMethod.getFullName();
 		StackFrame frame=currentThread.getTopFrame(); //getTopFrame(); //getModifiableTopFrame();   //getCallerStackFrame();
 		
-        if (l != null && !l.startsWith("java") && !l.startsWith("sun") && !l.startsWith("gov")) {
+			
+		if (l != null && !l.startsWith("java") && !l.startsWith("sun") && !l.startsWith("gov")) {
 			//key="";
 			temp="";
 			String name=frame.getMethodName();
-			//System.out.println("method name: "+name);
 			methods.add(name);
 			temp=temp+name;
 			
@@ -82,68 +85,73 @@ public class CoverageListener extends ListenerAdapter {
 			Object[] arguValues=frame.getArgumentValues(currentThread);
 			for(int i=0;i< arguValues.length;i++){
 					//System.out.print("ArguValue: " +arguValues[i]+" ");
+					if(i==0){
+						temp+="(";
+					}
 					temp=temp+arguValues[i];
+					if(i==arguValues.length-1){
+						temp=temp+")";
+					}else{
+						temp=temp+", ";
+					}
 					
 			}
-			
-			if(memo.containsKey(temp)){
-				System.out.println("Memoization: ");  //  +memo.get(temp)
-				//currentThread.skipInstruction();
-				//StackFrame frame1 = currentThread.getModifiableTopFrame();
-				ireturn.init(enteredMethod, pc.getInstructionIndex(), pc.getPosition());
-				
-				//ireturn.getAndSaveReturnValue(frame);
-				
-				// int ret=ireturn.getReturnValue();
-				// System.out.println("The ret is: "+ret);
-				//frame.pop();
-				//System.out.println("The returntype is : "+ReturnType);
-				
-				int ret1=Integer.valueOf(memo.get(temp)).intValue();
-				double ret2=Double.parseDouble(memo.get(temp)); 
-				
-				// if(ReturnType.contains("double")){
-					// //int ret=Integer.valueOf(memo.get(temp)).intValue();
-					// frame.push(ret2);
-				// }
-				// else{
-					// //float ret=Float.parseFloat(memo.get(temp)); 
-					// frame.push(ret1);
-				// }
-				
-				frame.push(ret1);
-				frame.setPC(ireturn);
-				
-			    // frame.pop();
-			    // frame.push(42);
 
-				//currentThread.skipInstruction(pc.getNext());
-				//return ;
-				//memoCheck();
-				//System.out.println("Memo: "+memo.get(key));
+			String filePath = "report2.txt";
+			try{
+				File file = new File(filePath);
+				FileOutputStream fos = null;
+				if(!file.exists()){
+					file.createNewFile();
+					fos = new FileOutputStream(file);
+				}else{
+					
+					fos = new FileOutputStream(file,true);
+				}
+				OutputStreamWriter out = new OutputStreamWriter(fos, "UTF-8");
+
+			
+				if(memo.containsKey(temp)){
+					//System.out.println("Returning memoized return value for "+temp+":"+memo.get(temp)+".");  //  +memo.get(temp)
+					out.write("Returning memoized return value for "+temp+":"+memo.get(temp)+".\r\n");
+					//currentThread.skipInstruction();
+					//StackFrame frame1 = currentThread.getModifiableTopFrame();
+					ireturn.init(enteredMethod, pc.getInstructionIndex(), pc.getPosition());
+					
+					
+					int ret1=Integer.valueOf(memo.get(temp)).intValue();
+					double ret2=Double.parseDouble(memo.get(temp)); 
+					
+					
+					frame.push(ret1);
+					frame.setPC(ireturn);
+			
+				}
+				else{
+					key=temp;
+					
+					ReturnType=enteredMethod.getReturnTypeName();
+					MethodRet.put(key, ReturnType);
+
+					//System.out.println(temp+":returnValue is not memoizable.:" );
+					//System.out.println("Memoizing "+temp+":");
+					// out.write(temp+":returnValue is not memoizable.: \r\n");
+					// out.write("Memoizing "+temp+":\r\n");
+					
+					// int argnum=enteredMethod.getNumberOfArguments() ;
+					// System.out.println("The # of argus: "+argnum);
+					
+					//int res= frame.peek(); //stack.peek();   stack.getResult(); 
+					//System.out.println("The result: "+res);
+					
+				}
+				out.close();
+			}catch (Exception e) {
+				e.printStackTrace();
 			}
-			else{
-				key=temp;
-				
-				//System.out.println();
-				//System.out.println("key: "+key);
-				
-				// String signature=enteredMethod.	getSignature();
-				// System.out.println("Signature: "+signature);
-				
-				ReturnType=enteredMethod.getReturnTypeName();
-				MethodRet.put(key, ReturnType);
-				//System.out.println("The Return Type of the Method: "+ReturnType);
-				
-				// int argnum=enteredMethod.getNumberOfArguments() ;
-				// System.out.println("The # of argus: "+argnum);
-				
-				// int res= frame.peek(); //stack.peek();   stack.getResult(); 
-				// System.out.println("The result: "+res);
-				
-			}
-				
-        }	
+		
+		}	
+		
 	}
 
     //@Override
@@ -215,8 +223,33 @@ public class CoverageListener extends ListenerAdapter {
 				// currentThread.skipInstruction();
 				// return ;
 			// }
+
+			if(!memo.containsKey(key)){
+				String filePath = "report2.txt";
+				try{
+					File file = new File(filePath);
+					FileOutputStream fos = null;
+					if(!file.exists()){
+						file.createNewFile();
+						fos = new FileOutputStream(file);
+					}else{
+						
+						fos = new FileOutputStream(file,true);
+					}
+					OutputStreamWriter out = new OutputStreamWriter(fos, "UTF-8");
+
+					// System.out.println(key+":"+val+ " is not memoizable." );
+					// System.out.println("Memoizing "+key+":"+val+".");
+					out.write(key+":"+val+ " is not memoizable."+"\r\n");
+					out.write("Memoizing "+key+":"+val+".\r\n");
+					out.close();
+
+				}catch (Exception e) {
+					e.printStackTrace();
+				}
+				memo.put(key, val);
+			}
 			
-			memo.put(key, val);
 		}
 		
 	
