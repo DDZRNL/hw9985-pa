@@ -1,0 +1,7 @@
+#! /bin/bash
+#java -cp javacc-javacc-7.0.11/bootstrap/javacc.jar org.javacc.parser.Main
+#javacc lexparse.jj
+#javac *.java
+#java SemanticCHecker > OUTPUT
+programStr='cat $1'
+echo 'FAIL' >> ./OUTPUT
